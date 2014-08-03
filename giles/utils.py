@@ -17,7 +17,7 @@
 class Struct(object):
     # Empty class, useful for making "structs."
 
-    def __init__(self, attributes = {}):
+    def __init__(self, attributes={}):
 
         # For convenience, it supports getting a dictionary of attributes to
         # set.
@@ -122,3 +122,9 @@ def name_is_valid(name_str):
 
     # Passed the tests.
     return True
+
+def get_plural_str(count, base):
+
+    if count == 1:
+        return "1 " + base
+    return "%s %ss" % (count, base)

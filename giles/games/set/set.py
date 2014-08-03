@@ -20,9 +20,9 @@ import time
 from giles.state import State
 from giles.utils import booleanize
 from giles.utils import demangle_move
-from giles.games.game import Game
+from giles.games.seated_game import SeatedGame
 from giles.games.seat import Seat
-from giles.utils import Struct
+from giles.utils import Struct, get_plural_str
 
 # Some useful default values.
 DEFAULT_MAX_CARDS = 24
@@ -86,7 +86,7 @@ BITFIELDS = [
    {1: BLOB, 2: LOZENGE, 4: SQUIGGLE, BLOB: 1, LOZENGE: 2, SQUIGGLE: 4},
 ]
 
-class Set(Game):
+class Set(SeatedGame):
     """A Set game table implementation.  Invented in 1974 by Marsha Jean Falco.
     """
 
@@ -101,7 +101,7 @@ class Set(Game):
         self.max_players = 32767 # We don't even use this.
         self.state = State("need_players")
         self.prefix = "(^RSet^~): "
-        self.log_prefix = "%s/%s" % (self.table_display_name, self.game_display_name)
+        self.log_prefix = "%s/%s: " % (self.table_display_name, self.game_display_name)
 
         # Set-specific stuff.
         self.max_cards_on_table = DEFAULT_MAX_CARDS
@@ -143,7 +143,7 @@ class Set(Game):
 
         # If the size of the layout is 12 or smaller, this is easy;
         # we just draw cards left (if any) to fill gaps in the board.
-        # If it's larger than 12, it's easy too; we rebuild the 
+        # If it's larger than 12, it's easy too; we rebuild the
         # layout without any gaps (and then, juuust in case, add
         # blank cards if it somehow got smaller than 12.)
 
@@ -166,7 +166,7 @@ class Set(Game):
         # |1or3| 3 {    } |    |
         # |2or3| 4 {    } =    =
         # `----' 5 \~~~~/ |=||=|
-    
+
         # Just in case...
         if line_number < 1 or line_number > 5:
             return
@@ -196,7 +196,7 @@ class Set(Game):
             return fill.edge_art[2] % center
         elif line_number == 5:
             return fill.edge_art[3]
-    
+
         # Dunno how we got here...
         return "ERROR"
 
@@ -435,7 +435,7 @@ class Set(Game):
 
         # Update the last play time.
         self.last_play_time = time.time()
-                
+
     def declare(self, player, declare_bits):
 
         if not self.get_seat_of_player(player):
@@ -534,7 +534,7 @@ class Set(Game):
         for card in cards:
             card_str = card[2].code + " ".join([x.display for x in card])
             if card[0] != ONE:
-               card_str += "s"
+                card_str += "s"
             card_str_list.append(card_str + "^~")
 
         return ", ".join(card_str_list)
@@ -577,7 +577,7 @@ class Set(Game):
             else:
                 winner_dict[score] = [seat.player_name]
 
-        winner_score_list = sorted(winner_dict.keys(), reverse = True)
+        winner_score_list = sorted(winner_dict.keys(), reverse=True)
 
         winner_score = winner_score_list[0]
         self.send_scores()
@@ -600,9 +600,7 @@ class Set(Game):
                 name_color_code = "^M"
                 score_color_code = "^G"
                 state = "yellow"
-            tell_string = "   ^R%s^~: %s%s^~, %s%s^~ point" % (seat, name_color_code, player_str, score_color_code, str(seat.data.score))
-            if seat.data.score != 1:
-                tell_string += "s"
+            tell_string = "   ^R%s^~: %s%s^~, %s%s^~" % (seat, name_color_code, player_str, score_color_code, get_plural_str(seat.data.score, "point"))
             player.tell_cc(tell_string + "\n")
         player.tell_cc("\n")
 

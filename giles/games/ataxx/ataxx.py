@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from giles.state import State
-from giles.games.game import Game
+from giles.games.seated_game import SeatedGame
 from giles.games.seat import Seat
 from giles.utils import demangle_move
 
@@ -30,7 +30,7 @@ PIT = "pit"
 
 COLS = "abcdefghijklmnopqrstuvwxyz"
 
-class Ataxx(Game):
+class Ataxx(SeatedGame):
     """An Ataxx game table implementation.  Invented in 1988 by Dave Crummack
     and Craig Galley.
     """
@@ -49,7 +49,7 @@ class Ataxx(Game):
         self.max_players = 2
         self.state = State("need_players")
         self.prefix = "(^RAtaxx^~): "
-        self.log_prefix = "%s/%s " % (self.table_display_name, self.game_display_name)
+        self.log_prefix = "%s/%s: " % (self.table_display_name, self.game_display_name)
 
         # Ataxx-specific stuff.
         self.board = None
@@ -313,7 +313,7 @@ class Ataxx(Game):
 
         # Now, is it a split or a leap?
         if abs(src_r - dst_r) < 2 and abs(src_c - dst_c) < 2:
-            
+
             # Split.  Add a new piece, increase the count.
             action_str = "^Mgrew^~ into"
             self.board[dst_r][dst_c] = color
@@ -360,7 +360,7 @@ class Ataxx(Game):
         # prepping a particular cool layout with a single cut-and-pasted
         # string, though.
         for loc in loc_list:
-            
+
             col, row = loc
 
             # Bail if out of bounds.

@@ -1,4 +1,4 @@
-# Giles: rps.py
+# Giles: rock_paper_scissors.py
 # Copyright 2012 Phil Bordelon
 #
 # This program is free software: you can redistribute it and/or modify
@@ -15,10 +15,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from giles.state import State
-from giles.games.game import Game
+from giles.games.seated_game import SeatedGame
 from giles.games.seat import Seat
 
-class RockPaperScissors(Game):
+class RockPaperScissors(SeatedGame):
     """A Rock-Paper-Scissors game table implementation.
     """
 
@@ -37,7 +37,7 @@ class RockPaperScissors(Game):
         self.state = State("need_players")
         self.plays = [None, None]
         self.prefix = "(^RRPS^~): "
-        self.log_prefix = "%s/%s " % (self.table_display_name, self.game_display_name)
+        self.log_prefix = "%s/%s: " % (self.table_display_name, self.game_display_name)
 
         # RPS requires both seats, so may as well mark them active.
         self.seats[0].active = True

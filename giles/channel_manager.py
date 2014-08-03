@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from channel import Channel
+from giles.channel import Channel
 
 from giles.utils import name_is_valid
 
@@ -27,10 +27,17 @@ class ChannelManager(object):
 
         self.server = server
 
-        # Set up the global channel.
-        self.channels = [Channel("Global", persistent = True, notifications = False, gameable = False)]
+        # Set up the global channel and admin channel.
+        self.channels = [Channel("Global", persistent=True, notifications=False,
+                                 gameable=False),
+                         Channel("Admin", persistent=True, notifications=False,
+                                 gameable=False),
+                        ]
 
-    def add_channel(self, name, persistent = False, notifications = True, gameable = False, key = None):
+    def log(self, message):
+        self.server.log.log("[CM] %s" % message)
+
+    def add_channel(self, name, persistent=False, notifications=True, gameable=False, key=None):
 
         if not name_is_valid(name):
             return False
@@ -53,7 +60,11 @@ class ChannelManager(object):
 
         return False
 
-    def connect(self, player, name, key = None):
+    def list_player_channel_names(self, player):
+
+        return [x.name for x in self.channels if player in x.listeners]
+
+    def connect(self, player, name, key=None):
 
         success = False
 
@@ -63,12 +74,20 @@ class ChannelManager(object):
             lower_name = name.lower()
             for channel in self.channels:
                 if channel.name == lower_name:
+
+                    # If they're trying to connect to the admin channel, make
+                    # sure they're actually an admin.
+                    if lower_name == "admin" and not self.server.admin_manager.is_admin(player):
+                        player.tell_cc("You're not an admin!\n")
+                        self.log("%s attempted to connect to the admin channel." % player)
+                        return False
+
                     success = channel.connect(player, key)
 
             if not success:
 
                 # Huh.  All right; let's make it!
-                new_channel = self.add_channel(name, key = key)
+                new_channel = self.add_channel(name, key=key)
                 if new_channel:
 
                     # Creation was successful.  Connect the player.
@@ -112,6 +131,6 @@ class ChannelManager(object):
         # Remove any non-persistent channels with no listeners.
         for channel in self.channels:
             if not channel.persistent and len(channel.listeners) == 0:
-                self.server.log.log("Deleting stale channel %s." % channel)
+                self.log("Deleting stale channel %s." % channel)
                 self.channels.remove(channel)
                 del channel

@@ -1,4 +1,4 @@
-# Giles: four_player_card_game_layout.py
+# Giles: three_player_card_game_layout.py
 # Copyright 2012 Phil Bordelon
 #
 # This program is free software: you can redistribute it and/or modify
@@ -17,12 +17,10 @@
 from giles.games.layout import Layout
 from giles.games.playing_card import card_to_str
 
-NORTH = "North"
 EAST = "East"
 SOUTH = "South"
 WEST = "West"
 
-NORTH_POINTER = "^^^^" # Due to Miniboa's caret codes.
 EAST_POINTER = ">>"
 SOUTH_POINTER = "vv"
 WEST_POINTER = "<<"
@@ -30,16 +28,16 @@ NONE_POINTER = "++"
 
 BLANK_ROW = "       |                    |\n"
 
-class FourPlayerCardGameLayout(Layout):
-    """A standard layout for a 4-player card game, with North, East, South,
-    and West sitting at a table.
+class ThreePlayerCardGameLayout(Layout):
+    """A standard layout for a 3-player card game.  Much like a 4P one, but
+    it ditches North.  This allows reuse of EAST, SOUTH, and WEST in games
+    that support both 3 and 4 players.
     """
 
     def __init__(self):
 
-        super(FourPlayerCardGameLayout, self).__init__()
+        super(ThreePlayerCardGameLayout, self).__init__()
 
-        self.north_card = None
         self.east_card = None
         self.south_card = None
         self.west_card = None
@@ -55,9 +53,7 @@ class FourPlayerCardGameLayout(Layout):
             color_str = "^W"
 
         card_str = "  "
-        if who == NORTH:
-            card_str = card_to_str(self.north_card)
-        elif who == EAST:
+        if who == EAST:
             card_str = card_to_str(self.east_card)
         elif who == SOUTH:
             card_str = card_to_str(self.south_card)
@@ -74,11 +70,8 @@ class FourPlayerCardGameLayout(Layout):
             return
 
         self.representation += "       .--------------------.\n"
-        self.representation += "       |         ^RNN^~         |\n"
         self.representation += BLANK_ROW
-        self.representation += "       |         %s         |\n" % self.card_str(NORTH)
-        self.representation += BLANK_ROW
-        self.representation += "       | ^MWW^~  %s  %s  %s  ^MEE^~ |\n" % (self.card_str(WEST), self.turn_pointer, self.card_str(EAST))
+        self.representation += "       | ^MWW^~  %s  %s  %s  ^BEE^~ |\n" % (self.card_str(WEST), self.turn_pointer, self.card_str(EAST))
         self.representation += BLANK_ROW
         self.representation += "       |         %s         |\n" % self.card_str(SOUTH)
         self.representation += BLANK_ROW
@@ -88,9 +81,7 @@ class FourPlayerCardGameLayout(Layout):
     def change_turn(self, who):
 
         self.turn = who
-        if self.turn == NORTH:
-            self.turn_pointer = NORTH_POINTER
-        elif self.turn == EAST:
+        if self.turn == EAST:
             self.turn_pointer = EAST_POINTER
         elif self.turn == SOUTH:
             self.turn_pointer = SOUTH_POINTER
@@ -108,9 +99,7 @@ class FourPlayerCardGameLayout(Layout):
 
     def place(self, who, card):
 
-        if who == NORTH:
-            self.north_card = card
-        elif who == EAST:
+        if who == EAST:
             self.east_card = card
         elif who == SOUTH:
             self.south_card = card
@@ -127,7 +116,6 @@ class FourPlayerCardGameLayout(Layout):
 
     def clear(self):
 
-        self.north_card = None
         self.east_card = None
         self.south_card = None
         self.west_card = None

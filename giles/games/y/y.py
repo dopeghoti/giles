@@ -17,7 +17,7 @@
 from giles.utils import booleanize
 from giles.utils import demangle_move
 from giles.state import State
-from giles.games.game import Game
+from giles.games.seated_game import SeatedGame
 from giles.games.seat import Seat
 
 # What are the minimum and maximum sizes for the board?
@@ -41,9 +41,9 @@ WHITE = "white"
 BLACK = "black"
 
 
-COL_CHARACTERS="abcdefghijklmnopqrstuvwxyz"
+COL_CHARACTERS = "abcdefghijklmnopqrstuvwxyz"
 
-class Y(Game):
+class Y(SeatedGame):
     """A Y game table implementation.  Invented by Claude Shannon.
     Adapted from my Volity implementation.
     """
@@ -62,7 +62,7 @@ class Y(Game):
         self.max_players = 2
         self.state = State("need_players")
         self.prefix = "(^RY^~): "
-        self.log_prefix = "%s/%s " % (self.table_display_name, self.game_display_name)
+        self.log_prefix = "%s/%s: " % (self.table_display_name, self.game_display_name)
 
         # Y-specific guff.
         self.seats[0].data.color = WHITE
@@ -79,6 +79,8 @@ class Y(Game):
         self.move_list = []
         self.last_moves = []
         self.resigner = None
+        self.adjacency = None
+        self.found_winner = False
 
         # Y requires both seats, so may as well mark them active.
         self.seats[0].active = True

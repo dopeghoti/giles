@@ -20,7 +20,12 @@ import giles.server
 import sys
 
 cp = ConfigParser.SafeConfigParser()
-cp.read("giles.conf")
+if len(sys.argv) == 2:
+    config_filename = sys.argv[1]
+else:
+    config_filename = "giles.conf"
+
+cp.read(config_filename)
 
 if not cp.has_option("server", "source_url"):
     print("You absolutely must provide a giles.conf with a valid source_url.")
@@ -34,14 +39,20 @@ if not cp.has_option("server", "name"):
 else:
     name = cp.get("server", "name")
 
+if not cp.has_option("server", "admin_password"):
+    admin_password = None
+else:
+    admin_password = cp.get("server", "admin_password")
+
+if not cp.has_option("server", "port"):
+    port = 9435
+else:
+    port = cp.getint("server", "port")
+
 # No need to keep the config parser around now that we're done with it.
 del cp
 
-server = giles.server.Server(name, source_url)
+server = giles.server.Server(name, source_url, admin_password, config_filename)
 
-if len(sys.argv) == 2:
-   port = int(sys.argv[1])
-else:
-   port = 9435
 server.instantiate(port)
 server.loop()

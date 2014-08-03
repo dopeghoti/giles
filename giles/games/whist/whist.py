@@ -15,15 +15,15 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from giles.games.four_player_card_game_layout import FourPlayerCardGameLayout, NORTH, SOUTH, EAST, WEST
-from giles.games.game import Game
+from giles.games.seated_game import SeatedGame
 from giles.games.hand import Hand
 from giles.games.playing_card import new_deck, str_to_card, card_to_str, hand_to_str, SHORT, LONG
 from giles.games.seat import Seat
 from giles.games.trick import handle_trick, hand_has_suit, sorted_hand
 from giles.state import State
-from giles.utils import Struct
+from giles.utils import Struct, get_plural_str
 
-class Whist(Game):
+class Whist(SeatedGame):
     """A Whist game table implementation.  Whist came about sometime in the
     18th century.  This implementation does not (currently) score honours,
     because honours are boring.
@@ -79,28 +79,32 @@ class Whist(Game):
         player.tell_cc("              ^!play^. <card>, ^!pl^.     Play <card> from your hand.\n")
         player.tell_cc("                 ^!hand^., ^!inv^., ^!i^.     Look at the cards in your hand.\n")
 
-    def get_point_str(self, num):
-
-        if num == 1:
-            return "1 point"
-        return "%d points" % num
-
     def display(self, player):
 
-            player.tell_cc("%s" % self.layout)
+        player.tell_cc("%s" % self.layout)
+
+    def get_score_str(self):
+        return "          ^RNorth/South^~: %d    ^MEast/West^~: %d\n" % (self.ns.score, self.ew.score)
+
+    def get_color_code(self, seat):
+
+        if seat == self.seats[0] or seat == self.seats[2]:
+            return "^R"
+        else:
+            return "^M"
+
+    def get_sp_str(self, seat):
+
+        return "^G%s^~ (%s%s^~)" % (seat.player_name, self.get_color_code(seat), seat)
 
     def get_metadata(self):
 
         to_return = "\n\n"
         if self.turn:
-            if self.turn == self.seats[0] or self.turn == self.seats[2]:
-                seat_color = "^R"
-            else:
-                seat_color = "^M"
-            to_return += "It is ^Y%s^~'s turn (%s%s^~).  Trumps are ^C%s^~.\n" % (self.turn.player_name, seat_color, self.turn, self.trump_suit)
+            to_return += "It is ^Y%s^~'s turn (%s%s^~).  Trumps are ^C%s^~.\n" % (self.turn.player_name, self.get_color_code(self.turn), self.turn, self.trump_suit)
             to_return += "Tricks:   ^RNorth/South^~: %d    ^MEast/West^~: %d\n" % (self.ns.tricks, self.ew.tricks)
-        to_return += "The goal score for this game is ^C%s^~.\n" % self.get_point_str(self.goal)
-        to_return += "          ^RNorth/South^~: %d    ^MEast/West^~: %d\n" % (self.ns.score, self.ew.score)
+        to_return += "The goal score for this game is ^C%s^~.\n" % get_plural_str(self.goal, "point")
+        to_return += self.get_score_str()
 
         return to_return
 
@@ -121,7 +125,7 @@ class Whist(Game):
 
         # Got a valid goal.
         self.goal = new_goal
-        self.bc_pre("^M%s^~ has changed the goal to ^G%s^~.\n" % (player, self.get_point_str(new_goal)))
+        self.bc_pre("^M%s^~ has changed the goal to ^G%s^~.\n" % (player, get_plural_str(new_goal, "point")))
 
     def clear_trick(self):
 
@@ -140,7 +144,7 @@ class Whist(Game):
 
         dealer_name = self.dealer.player_name
 
-        self.bc_pre("^R%s^~ (^C%s^~) gives the cards a good shuffle...\n" % (dealer_name, self.dealer))
+        self.bc_pre("^R%s^~ (%s%s^~) gives the cards a good shuffle...\n" % (dealer_name, self.get_color_code(self.dealer), self.dealer))
         deck = new_deck()
         deck.shuffle()
 
@@ -151,7 +155,7 @@ class Whist(Game):
             seat.data.hand = Hand()
         for i in range(13):
             for seat in self.seats:
-                seat.data.hand.draw(deck.discard())
+                seat.data.hand.add(deck.discard())
 
         # Flip the dealer's last card; it determines the trump suit.
         last_card = self.dealer.data.hand[-1]
@@ -234,11 +238,11 @@ class Whist(Game):
         # They either matched the led suit, didn't have any of it, or they
         # are themselves the leader.  Nevertheless, their play is valid.
         seat.data.card = potential_card
-        self.trick.draw(seat.data.hand.discard_specific(potential_card))
+        self.trick.add(seat.data.hand.discard_specific(potential_card))
         trump_str = ""
         if potential_card.suit == self.trump_suit:
             trump_str = ", a ^Rtrump^~"
-        self.bc_pre("^G%s^~ (^C%s^~) %s ^C%s^~%s.\n" % (seat.player_name, seat, action_str, card_to_str(potential_card, LONG), trump_str))
+        self.bc_pre("%s %s ^C%s^~%s.\n" % (self.get_sp_str(seat), action_str, card_to_str(potential_card, LONG), trump_str))
         self.layout.place(seat.data.who, potential_card)
         return potential_card
 
@@ -368,7 +372,7 @@ class Whist(Game):
         winning_seat = winning_seat_list[0]
 
         # Print information about the winning card.
-        self.bc_pre("^G%s^~ (^C%s^~) wins the trick with ^C%s^~.\n" % (winning_seat.player_name, winning_seat, card_to_str(winner, LONG)))
+        self.bc_pre("%s wins the trick with ^C%s^~.\n" % (self.get_sp_str(winning_seat), card_to_str(winner, LONG)))
 
         # Give the trick to the correct partnership.
         if winning_seat == self.seats[0] or winning_seat == self.seats[2]:
@@ -398,7 +402,8 @@ class Whist(Game):
             self.ew.score += addend
 
         # Let everyone know.
-        self.bc_pre("%s wins the hand and gains ^C%s^~.\n" % (winning_side, self.get_point_str(addend)))
+        self.bc_pre("%s wins the hand and gains ^C%s^~.\n" % (winning_side, get_plural_str(addend, "point")))
+        self.bc_pre(self.get_score_str())
 
     def find_winner(self):
 

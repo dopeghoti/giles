@@ -34,10 +34,12 @@ class Player(object):
 
             "last_channel": None,
             "last_table": None,
+            "focus_table": None,
 
-            "timestamps": True,
+            "color": True,
+            "timestamps": False,
         }
-        self.state = None
+        self.state = state
 
     def __repr__(self):
         return self.display_name
@@ -74,7 +76,7 @@ class Player(object):
         self.tell("Your name is now %s.\n" % name)
         return True
 
-    def move(self, location, custom_join = None, custom_part = None):
+    def move(self, location, custom_join=None, custom_part=None):
         if location:
 
             if self.location:
@@ -100,7 +102,17 @@ class Player(object):
         self.client.send_cc(msg)
 
     def prompt(self):
-        msg = "[^!%s^.] > " % self.location.name
+        if self.server.admin_manager.is_admin(self):
+            loc_color_code = "^R"
+            ts_color_code = "^R"
+            prompt = "#"
+        else:
+            loc_color_code = "^!"
+            ts_color_code = "^C"
+            prompt = ">"
+        msg = "[%s%s^~] %s " % (loc_color_code, self.location.name, prompt)
+        if self.config["focus_table"]:
+            msg = "^Y*%s*^~ %s" % (self.config["focus_table"], msg)
         if self.config["timestamps"]:
-            msg = "(^C%s^~) %s" % (self.server.timestamp, msg)
+            msg = "(%s%s^~) %s" % (ts_color_code, self.server.timestamp, msg)
         self.client.send_prompt_cc(msg)

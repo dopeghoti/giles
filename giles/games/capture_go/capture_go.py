@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from giles.games.game import Game
+from giles.games.seated_game import SeatedGame
 from giles.games.seat import Seat
 from giles.state import State
 from giles.utils import demangle_move
@@ -30,7 +30,7 @@ WHITE = giles.games.goban.WHITE
 
 LETTERS = giles.games.goban.LETTERS
 
-class CaptureGo(Game):
+class CaptureGo(SeatedGame):
     """A Capture Go game table implementation.  One-Capture Go was invented by
     Yasuda Yashutoshi.
     """
@@ -49,7 +49,7 @@ class CaptureGo(Game):
         self.max_players = 2
         self.state = State("need_players")
         self.prefix = "(^RCapture Go^~): "
-        self.log_prefix = "%s/%s " % (self.table_display_name, self.game_display_name)
+        self.log_prefix = "%s/%s: " % (self.table_display_name, self.game_display_name)
 
         # Capture Go-specific stuff.
         self.turn = None
@@ -78,7 +78,7 @@ class CaptureGo(Game):
     def get_stone_str(self, count):
 
         if count == 1:
-           return "1 stone"
+            return "1 stone"
         return "%d stones" % count
 
     def get_supplemental_str(self):
@@ -270,7 +270,7 @@ class CaptureGo(Game):
                     handled = True
 
                 if primary in ("done", "ready", "d", "r",):
-                
+
                     self.channel.broadcast_cc(self.prefix + "The game is now looking for players.\n")
                     self.state.set("need_players")
                     handled = True
@@ -323,7 +323,7 @@ class CaptureGo(Game):
                         self.resolve(winner)
                         self.finish()
                     else:
-                        
+
                         # Nope.  Switch turns...
                         if self.turn == BLACK:
                             self.turn = WHITE

@@ -17,7 +17,7 @@
 from giles.utils import booleanize
 from giles.utils import demangle_move
 from giles.state import State
-from giles.games.game import Game
+from giles.games.seated_game import SeatedGame
 from giles.games.seat import Seat
 
 # What are the minimum and maximum sizes for the board?
@@ -37,9 +37,9 @@ WHITE = "white"
 BLACK = "black"
 
 
-COL_CHARACTERS="abcdefghijklmnopqrstuvwxyz"
+COL_CHARACTERS = "abcdefghijklmnopqrstuvwxyz"
 
-class Hex(Game):
+class Hex(SeatedGame):
     """A Hex game table implementation.  Invented independently by Piet
     Hien and John Nash.  Adapted from both my Giles Y implementation and
     my Volity Hex implementation.
@@ -59,7 +59,7 @@ class Hex(Game):
         self.max_players = 2
         self.state = State("need_players")
         self.prefix = "(^RHex^~): "
-        self.log_prefix = "%s/%s " % (self.table_display_name, self.game_display_name)
+        self.log_prefix = "%s/%s: " % (self.table_display_name, self.game_display_name)
 
         # Hex-specific guff.
         self.seats[0].data.color = WHITE
@@ -76,6 +76,8 @@ class Hex(Game):
         self.last_x = None
         self.last_y = None
         self.is_quickstart = False
+        self.adjacency = None
+        self.found_winner = False
 
         # Hex requires both seats, so may as well mark them active.
         self.seats[0].active = True

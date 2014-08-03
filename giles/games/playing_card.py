@@ -1,5 +1,5 @@
 # Giles: playing_card.py
-# Copyright 2012 Rob Palkowski, Phil Bordelon
+# Copyright 2012, 2014 Rob Palkowski, Phil Bordelon
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -29,6 +29,10 @@ DIAMONDS = "Diamonds"
 HEARTS = "Hearts"
 SPADES = "Spades"
 
+# Jokers don't have traditional suits, but there's a black one and a red one.
+BLACK = "Black"
+RED = "Red"
+
 RANKS = [ACE, '2', '3', '4', '5', '6', '7', '8', '9', '10', JACK, QUEEN, KING]
 SUITS = [CLUBS, DIAMONDS, HEARTS, SPADES]
 
@@ -48,11 +52,11 @@ class PlayingCard(object):
     is not a bug; it allows for simple constructions such as "if mycard in
     myhand" without having to go through absurd gymnastics.
 
-    Methods of note are:  __repr_(), value(), and all ordinal comparisons, e.g.
+    Methods of note are:  __repr__(), value(), and all ordinal comparisons, e.g.
     __lt__().
     """
 
-    def __init__(self, r = None, s = None, ace_high = True):
+    def __init__(self, r=None, s=None, ace_high=True):
         self.rank = r
         self.suit = s
         self.ace_high = ace_high
@@ -176,6 +180,8 @@ def str_to_card(card_str):
         rank = JACK
     elif rank_char == "t":
         rank = 10
+    elif rank_char == "?":
+        rank = JOKER
     else:
         # Not a rank.
         return None
@@ -195,6 +201,11 @@ def str_to_card(card_str):
         suit = HEARTS
     elif suit_char == "s":
         suit = SPADES
+    # Jokers have weird suits, 'red' or 'black'.
+    elif rank == JOKER and suit_char == "b":
+        suit = BLACK
+    elif rank == JOKER and suit_char == "r":
+        suit = RED
     else:
         # Not a suit.
         return None
@@ -205,14 +216,14 @@ def str_to_card(card_str):
 def random_card():
     return PlayingCard(choice(RANKS), choice(SUITS))
 
-def new_deck(ace_high = True):
+def new_deck(ace_high=True):
     deck = Hand()
     for r in RANKS:
         for s in SUITS:
-            deck.draw(PlayingCard(r, s, ace_high))
+            deck.add(PlayingCard(r, s, ace_high))
     return deck
 
-def card_to_str(card, mode = SHORT):
+def card_to_str(card, mode=SHORT):
 
     # Returns a card in a reasonable text form for printing full hands,
     # etc. when in SHORT mode, or in nice pretty long form when in LONG
@@ -224,7 +235,7 @@ def card_to_str(card, mode = SHORT):
             return "  "
         short_suit = card.suit[0].upper()
         value = card.value()
-        if value in range(2,10):
+        if value in range(2, 10):
             short_rank = str(value)
         elif value == 10:
             short_rank = "t"
@@ -238,7 +249,7 @@ def card_to_str(card, mode = SHORT):
 
     return ""
 
-def hand_to_str(hand, trump_suit = None, is_sorted = True):
+def hand_to_str(hand, trump_suit=None, is_sorted=True):
 
     # Returns a reasonable string representation of a given hand.  Trumps
     # are bolded; if not trump, diamonds and hearts are red, and clubs and
@@ -252,11 +263,11 @@ def hand_to_str(hand, trump_suit = None, is_sorted = True):
     for card in hand:
         if is_sorted and card.suit != last_suit:
             if last_suit:
-               to_return += "/ "
+                to_return += "/ "
             last_suit = card.suit
         if card.suit == trump_suit:
             color_code = "^W"
-        elif card.suit == HEARTS or card.suit == DIAMONDS:
+        elif card.suit == HEARTS or card.suit == DIAMONDS or card.suit == RED:
             color_code = "^R"
         else:
             color_code = "^w"

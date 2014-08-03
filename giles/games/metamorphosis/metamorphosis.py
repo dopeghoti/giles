@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from giles.games.game import Game
+from giles.games.seated_game import SeatedGame
 from giles.games.seat import Seat
 from giles.state import State
 from giles.utils import booleanize
@@ -32,7 +32,7 @@ COLS = "abcdefghijklmnopqrstuvwxyz"
 # Adjacency in Metamorphosis is strictly orthogonal.
 CONNECTION_DELTAS = ((-1, 0), (1, 0), (0, -1), (0, 1))
 
-class Metamorphosis(Game):
+class Metamorphosis(SeatedGame):
     """A Metamorphosis game table implementation.  Invented in 2009 by Gregory
     Keith Van Patten.  Play seems to show that ko fight mode is definitely
     superior to the alternative, so we set it as default.
@@ -52,7 +52,7 @@ class Metamorphosis(Game):
         self.max_players = 2
         self.state = State("need_players")
         self.prefix = "(^RMetamorphosis^~): "
-        self.log_prefix = "%s/%s " % (self.table_display_name, self.game_display_name)
+        self.log_prefix = "%s/%s: " % (self.table_display_name, self.game_display_name)
 
         # Metamorphosis-specific stuff.
         self.board = None
@@ -69,6 +69,8 @@ class Metamorphosis(Game):
         self.last_r = None
         self.last_c = None
         self.resigner = None
+        self.adjacency_map = None
+        self.found_winner = False
 
         self.init_board()
 
@@ -521,7 +523,7 @@ class Metamorphosis(Game):
         # No winner yet.
         return None
 
-    def recurse_adjacency (self, color, row, col):
+    def recurse_adjacency(self, color, row, col):
 
         # Bail if we found a winner already.
         if self.found_winner:

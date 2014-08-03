@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from giles.games.game import Game
+from giles.games.seated_game import SeatedGame
 from giles.games.seat import Seat
 from giles.state import State
 from giles.utils import demangle_move
@@ -43,7 +43,7 @@ CONNECTION_DELTAS = ((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0
 # diagonal delta with one and then the other set to zero.
 CHECKERBOARD_DELTAS = ((-1, -1), (-1, 1), (1, -1), (1, 1))
 
-class Crossway(Game):
+class Crossway(SeatedGame):
     """A Crossway game table implementation.  Invented in 2007 by Mark Steere.
     """
 
@@ -61,7 +61,7 @@ class Crossway(Game):
         self.max_players = 2
         self.state = State("need_players")
         self.prefix = "(^RCrossway^~): "
-        self.log_prefix = "%s/%s " % (self.table_display_name, self.game_display_name)
+        self.log_prefix = "%s/%s: " % (self.table_display_name, self.game_display_name)
 
         # Crossway-specific stuff.
         self.board = None
@@ -74,6 +74,8 @@ class Crossway(Game):
         self.last_r = None
         self.last_c = None
         self.resigner = None
+        self.adjacency_map = None
+        self.found_winner = False
 
         self.init_board()
 
@@ -273,7 +275,7 @@ class Crossway(Game):
         if not handled:
 
             state = self.state.get()
-            command_bits = command_str.split()
+            command_bits = command_str.lower().split()
             primary = command_bits[0]
 
             if state == "setup":
@@ -386,7 +388,7 @@ class Crossway(Game):
         # No winner yet.
         return None
 
-    def recurse_adjacency (self, color, row, col):
+    def recurse_adjacency(self, color, row, col):
 
         # Bail if we found a winner already.
         if self.found_winner:
