@@ -24,6 +24,8 @@ from giles.utils import demangle_move, get_plural_str
 # Deltas are useful.
 CONNECTION_DELTAS = ((-1, 0), (1, 0), (0, -1), (0, 1))
 
+TAGS = ["abstract", "capture", "square", "2p"]
+
 class Tanbo(SeatedGame):
     """A Tanbo game table implementation.  Invented in 1993 by Mark Steere.
     This only implements the 2p version, although it does have the 9x9, 13x13,
@@ -83,10 +85,9 @@ class Tanbo(SeatedGame):
         self.black.data.root_list = []
         self.white.data.root_list = []
 
-        # There are three different layouts depending on the size.  All of them
-        # alternate between black and white pieces; the two larger ones have 16
-        # roots, whereas the smallest size has 4.  (There's a 5x5 grid for
-        # testing as well.)
+        # There are different layouts depending on the size.  All of them
+        # alternate between black and white pieces; the smallest sizes have
+        # 4 roots, the standard sizes 16, and the 21x21 board has 36.
         if self.size == 5:
             jump_delta = 4
             extent = 2

@@ -211,33 +211,40 @@ class GameMaster(object):
         player.tell_cc("No such game ^R%s^~.\n" % game_name)
         return False
 
-    def list_games(self, player):
+    def list_games(self, player, tag=None):
 
         player.tell_cc("\nGames available:\n\n")
         game_names = sorted(self.games.keys())
         state = "magenta"
         msg = "   "
-        count = 0
 
         # Filter the game list, removing admin-only games if the player is not
         # an admin.
         if not self.server.admin_manager.is_admin(player):
             game_names = [x for x in game_names if not self.games[x].admin_only]
 
+        # Filter further if a tag is asked for.
+        if tag:
+            game_names = [x for x in game_names if tag in self.games[x].tags]
+
         for game in game_names:
             if state == "magenta":
-                msg += "^M%s^~ " % game
+                msg += "^M%s^~ [" % game
                 state = "red"
             elif state == "red":
-                msg += "^R%s^~ " % game
+                msg += "^R%s^~ [" % game
                 state = "magenta"
-            count += 1
-            if count == 7:
-                msg += "\n   "
-                count = 0
+            if self.games[game].tags:
+                msg += " ".join(self.games[game].tags)
+            else:
+                msg += "(no tags)"
+            msg += "]\n   "
 
         player.tell_cc(msg + "\n\n")
-        self.log("%s requested the list of available games." % player)
+        if tag:
+            self.log("%s requested the list of games with tag %s." % (player, tag))
+        else:
+            self.log("%s requested the list of all available games." % player)
 
     def list_tables(self, player, show_private=False):
 

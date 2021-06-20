@@ -14,9 +14,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+# TODO: Reimplement the skew for even boards as a shift by one half-cell
+# to reduce the racing element.
+
 from giles.games.seated_game import SeatedGame
 from giles.games.seat import Seat
 from giles.state import State
+from giles.utils import booleanize
 from giles.utils import demangle_move
 
 # Some useful default values.
@@ -27,6 +31,8 @@ BLACK = "black"
 WHITE = "white"
 
 COLS = "abcdefghijklmnopqrstuvwxyz"
+
+TAGS = ["abstract", "connection", "square", "2p"]
 
 # 0 1 2
 # . . . 0
@@ -67,6 +73,7 @@ class Crossway(SeatedGame):
         self.board = None
         self.printable_board = None
         self.size = 19
+        self.is_skewed = False
         self.turn = None
         self.turn_number = 0
         self.seats[0].data.side = BLACK
@@ -90,11 +97,27 @@ class Crossway(SeatedGame):
     def update_printable_board(self):
 
         self.printable_board = []
+        if self.is_skewed:
+            half_edge_str = "".join("==") * (self.size / 2)
         col_str = "    " + "".join([" " + COLS[i] for i in range(self.size)])
         self.printable_board.append(col_str + "\n")
-        self.printable_board.append("   ^m.=" + "".join(["=="] * self.size) + ".^~\n")
+        if self.is_skewed:
+            self.printable_board.append("   ^W." + half_edge_str + "=^R=^K" + half_edge_str + ".^~\n")
+        else:
+            self.printable_board.append("   ^m.=" + "".join(["=="] * self.size) + ".^~\n")
         for r in range(self.size):
-            this_str = "%2d ^m|^~ " % (r + 1)
+            if self.is_skewed:
+                if r < (self.size / 2):
+                    left_edge_color = "^W"
+                    right_edge_color = "^K"
+                elif 2 * r == self.size - 1:
+                    left_edge_color = right_edge_color = "^R"
+                else:
+                    left_edge_color = "^K"
+                    right_edge_color = "^W"
+            else:
+                left_edge_color = right_edge_color = "^m"
+            this_str = "%2d %s|^~ " % (r + 1, left_edge_color)
             for c in range(self.size):
                 if r == self.last_r and c == self.last_c:
                     this_str += "^5"
@@ -105,9 +128,12 @@ class Crossway(SeatedGame):
                     this_str += "^Kx^~ "
                 else:
                     this_str += "^M.^~ "
-            this_str += "^m|^~ %d" % (r + 1)
+            this_str += "%s|^~ %d" % (right_edge_color, r + 1)
             self.printable_board.append(this_str + "\n")
-        self.printable_board.append("   ^m`=" + "".join(["=="] * self.size) + "'^~\n")
+        if self.is_skewed:
+            self.printable_board.append("   ^K." + half_edge_str + "=^R=^W" + half_edge_str + ".^~\n")
+        else:
+            self.printable_board.append("   ^m`=" + "".join(["=="] * self.size) + "'^~\n")
         self.printable_board.append(col_str + "\n")
 
     def show(self, player):
@@ -130,10 +156,15 @@ class Crossway(SeatedGame):
 
         if self.turn == BLACK:
             player = self.seats[0].player_name
-            color_msg = "^KBlack/Vertical^~"
+            color_msg = "^KBlack"
+            if not self.is_skewed:
+                color_msg += "/Vertical"
         else:
             player = self.seats[1].player_name
-            color_msg = "^WWhite/Horizontal^~"
+            color_msg = "^WWhite"
+            if not self.is_skewed:
+                color_msg += "/Horizontal"
+        color_msg += "^~"
 
         return ("It is ^Y%s^~'s turn (%s)." % (player, color_msg))
 
@@ -216,8 +247,13 @@ class Crossway(SeatedGame):
         if (self.state.get() == "need_players" and self.seats[0].player
            and self.seats[1].player and self.active):
             self.state.set("playing")
-            self.channel.broadcast_cc(self.prefix + "^KBlack/Vertical^~: ^R%s^~; ^WWhite/Horizontal^~: ^Y%s^~\n" %
-               (self.seats[0].player, self.seats[1].player))
+            black_str = "^KBlack"
+            if not self.is_skewed:
+                black_str += "/Vertical"
+            white_str = "^WWhite"
+            if not self.is_skewed:
+                white_str += "/Horizontal"
+            self.channel.broadcast_cc(self.prefix + "%s^~: ^R%s^~; %s^~: ^Y%s^~\n" % (black_str, self.seats[0].player, white_str, self.seats[1].player))
             self.turn = BLACK
             self.turn_number = 1
             self.send_board()
@@ -234,11 +270,36 @@ class Crossway(SeatedGame):
             player.tell_cc(self.prefix + "Size must be between %d and %d inclusive.\n" % (MIN_SIZE, MAX_SIZE))
             return
 
+        if size % 2 == 0 and self.is_skewed:
+            player.tell_cc(self.prefix + "Size must be odd to play with skewed goals.\n")
+            return
+
         # Valid!
         self.size = size
         self.channel.broadcast_cc(self.prefix + "^R%s^~ has set the board size to ^C%d^~.\n" % (player, size))
         self.init_board()
         self.update_printable_board()
+
+    def set_skew(self, player, skew_str):
+
+        skew_bool = booleanize(skew_str)
+        if skew_bool:
+            if skew_bool > 0:
+
+                # We can't be skewed if the board size is even.
+                if self.size % 2 == 0:
+                    player.tell_cc(self.prefix + "Even-sized boards cannot be skewed.\n")
+                    return
+
+                self.is_skewed = True
+                display_str = "^Con^~"
+            else:
+                self.is_skewed = False
+                display_str = "^coff^~"
+            self.channel.broadcast_cc(self.prefix + "^R%s^~ has turned skew mode %s.\n" % (player, display_str))
+            self.update_printable_board()
+        else:
+            player.tell_cc(self.prefix + "Not a valid boolean!\n")
 
     def resign(self, player):
 
@@ -288,7 +349,15 @@ class Crossway(SeatedGame):
                         player.tell_cc(self.prefix + "Invalid size command.\n")
                     handled = True
 
-                if primary in ("done", "ready", "d", "r",):
+                elif primary in ("skew", "sk",):
+
+                    if len(command_bits) == 2:
+                        self.set_skew(player, command_bits[1])
+                    else:
+                        player.tell_cc(self.prefix + "Invalid skew command.\n")
+                    handled = True
+
+                elif primary in ("done", "ready", "d", "r",):
 
                     self.channel.broadcast_cc(self.prefix + "The game is now looking for players.\n")
                     self.state.set("need_players")
@@ -368,17 +437,32 @@ class Crossway(SeatedGame):
             return self.seats[1].player_name
 
         # This is like most connection games; we check recursively from the
-        # top and left edges to see whether a player has won.
+        # top and left edges to see whether a player has won.  That works
+        # for the non-skewed version.  For the skew version, we have to be
+        # fancier with the edges.
         self.found_winner = False
         self.adjacency_map = []
         for i in range(self.size):
             self.adjacency_map.append([None] * self.size)
 
         for i in range(self.size):
-            if self.board[i][0] == WHITE:
-                self.recurse_adjacency(WHITE, i, 0)
-            if self.board[0][i] == BLACK:
-                self.recurse_adjacency(BLACK, 0, i)
+            if self.is_skewed:
+                # The skew may need diagonal adjacency, so <= rather than <.
+                if i <= (self.size / 2):
+                    if self.board[i][0] == WHITE:
+                        self.recurse_adjacency(WHITE, i, 0)
+                    if self.board[0][i] == WHITE:
+                        self.recurse_adjacency(WHITE, 0, i)
+                    if self.board[self.size - 1][i] == BLACK:
+                        self.recurse_adjacency(BLACK, self.size - 1, i)
+                if i >= ((self.size - 1) / 2):
+                    if self.board[i][0] == BLACK:
+                        self.recurse_adjacency(BLACK, i, 0)
+            else:
+                if self.board[i][0] == WHITE:
+                    self.recurse_adjacency(WHITE, i, 0)
+                if self.board[0][i] == BLACK:
+                    self.recurse_adjacency(BLACK, 0, i)
 
         if self.found_winner == BLACK:
             return self.seats[0].player_name
@@ -410,12 +494,23 @@ class Crossway(SeatedGame):
         self.adjacency_map[row][col] = True
 
         # Have we hit the winning side for this player?
-        if ((color == WHITE and col == self.size - 1) or
-           (color == BLACK and row == self.size - 1)):
+        if not self.is_skewed:
+            if ((color == WHITE and col == self.size - 1) or (color == BLACK and row == self.size - 1)):
 
-            # Success!
-            self.found_winner = color
-            return
+                # Success!
+                self.found_winner = color
+                return
+        else:
+            # Skew far edges are weirder.
+            if color == WHITE:
+                if (col == self.size - 1 and row >= (self.size - 1) / 2) or (row == self.size - 1 and col >= (self.size - 1) / 2):
+                    self.found_winner = WHITE
+                    return
+
+            if color == BLACK:
+                if (col == self.size - 1 and row <= self.size / 2) or (row == 0 and col >= (self.size - 1) / 2):
+                    self.found_winner = BLACK
+                    return
 
         # Not a win yet.  Recurse over adjacencies.
         for r_delta, c_delta in CONNECTION_DELTAS:
@@ -431,6 +526,7 @@ class Crossway(SeatedGame):
         player.tell_cc("\nCROSSWAY SETUP PHASE:\n\n")
         player.tell_cc("          ^!setup^., ^!config^., ^!conf^.     Enter setup phase.\n")
         player.tell_cc("             ^!size^. <size>,  ^!sz^.     Set board to <size>.\n")
+        player.tell_cc("             ^!skew^. on|off,  ^!sk^.     Enable skewed goals.\n")
         player.tell_cc("            ^!ready^., ^!done^., ^!r^., ^!d^.     End setup phase.\n")
         player.tell_cc("\nCROSSWAY PLAY:\n\n")
         player.tell_cc("      ^!move^. <ln>, ^!play^., ^!mv^., ^!pl^.     Make move <ln> (letter number).\n")

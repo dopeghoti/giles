@@ -36,8 +36,9 @@ HEX_DELTAS = ((0, -1), (0, 1), (-1, 0), (1, 0), (1, 1), (-1, -1))
 WHITE = "white"
 BLACK = "black"
 
-
 COL_CHARACTERS = "abcdefghijklmnopqrstuvwxyz"
+
+TAGS = ["abstract", "connection", "hex", "2p"]
 
 class Hex(SeatedGame):
     """A Hex game table implementation.  Invented independently by Piet
@@ -259,6 +260,7 @@ class Hex(SeatedGame):
                 self.board[self.size - 1][middle - delta] = BLACK
                 self.board[middle][0] = WHITE
                 self.board[middle - delta][self.size - 1] = WHITE
+                self.update_printable_board()
             self.send_board()
             self.channel.broadcast_cc(self.prefix + self.get_turn_str())
 

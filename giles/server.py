@@ -14,12 +14,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from datetime import datetime, timedelta
 from miniboa import TelnetServer
 
 import sys
 import time
 import traceback
 
+from giles.account_manager import AccountManager
 from giles.admin_manager import AdminManager
 from giles.channel_manager import ChannelManager
 from giles.chat import Chat
@@ -41,9 +43,9 @@ CLEANUP_INTERVAL_TICKS = 500
 KEEPALIVE_INTERVAL_SECONDS = 60
 KEEPALIVE_INTERVAL_TICKS = 1500
 
-# And game ticks?
-GAMEINTERVAL_TICKS_SECONDS = 0.5
-GAMETICK_INTERVAL_TICKS = 20
+# And gameplay ticks?
+GAMEPLAY_INTERVAL_SECONDS = 0.5
+GAMEPLAY_INTERVAL_TICKS = 20
 
 class Server(object):
     """The Giles server itself.  Tracks all players, games in progress,
@@ -64,6 +66,7 @@ class Server(object):
         self.players = []
         self.spaces = []
         self.should_run = True
+        self.startup_datetime = None
         self.timestamp = None
         self.current_day = None
         self.update_timestamp()
@@ -72,6 +75,7 @@ class Server(object):
         # Initialize the various workers.
         self.die_roller = DieRoller()
         self.configurator = Configurator()
+        self.account_manager = AccountManager(self)
         self.channel_manager = ChannelManager(self)
         self.game_master = GameMaster(self)
         self.chat = Chat(self)
@@ -87,13 +91,15 @@ class Server(object):
         self.wall = self.channel_manager.channels[0]
         self.log.log("Server started up.")
 
-    def instantiate(self, port=9435, timeout=.05):
+    def instantiate(self, port, timeout=.05):
         self.telnet = TelnetServer(
            port=port,
            address='',
            on_connect=self.connect_client,
            on_disconnect=self.disconnect_client,
            timeout=timeout)
+        self.log.log("Listening on port %d." % port)
+        self.startup_datetime = datetime.now()
         self.update_timestamp()
 
     def update_timestamp(self):
@@ -134,8 +140,8 @@ class Server(object):
                 keepalive_ticker = 0
 
             gametick_ticker += 1
-            if ((gametick_time + GAMEINTERVAL_TICKS_SECONDS <= curr_time) or
-             ((gametick_ticker % GAMETICK_INTERVAL_TICKS) == 0)):
+            if ((gametick_time + GAMEPLAY_INTERVAL_SECONDS <= curr_time) or
+             ((gametick_ticker % GAMEPLAY_INTERVAL_TICKS) == 0)):
                 self.game_master.tick()
                 gametick_time = curr_time
                 gametick_ticker = 0
@@ -229,6 +235,12 @@ class Server(object):
                 return player
 
         return None
+
+    def get_startup_datetime(self):
+        return self.startup_datetime
+
+    def get_uptime(self):
+        return datetime.now() - self.startup_datetime
 
     def cleanup(self):
 

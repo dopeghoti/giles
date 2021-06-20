@@ -74,7 +74,14 @@ class Chat(object):
                     focus_table = player.config["focus_table"]
                     if focus_table:
                         if command[0] in ('/',):
-                            self.parse(command[1:], player)
+
+                            # Make sure the subcommand is actually something.
+                            possible_command = command[1:].strip()
+                            if len(possible_command):
+                                self.parse(command[1:], player)
+                            else:
+                                state.set_sub("prompt")
+
                         else:
                             self.table("%s %s" % (focus_table, command), player)
 
@@ -198,8 +205,11 @@ class Chat(object):
             elif primary in ('focus', 'f'):
                 self.focus(secondary, player)
 
-            elif primary in ('unfocus', 'unf'):
+            elif primary in ('unfocus', 'defocus', 'unf'):
                 self.unfocus(player)
+
+            elif primary in ('uptime',):
+                self.uptime(player)
 
             elif primary in ('quit', 'exit',):
                 self.quit(player)
@@ -464,6 +474,10 @@ class Chat(object):
         else:
             player.tell("Invalid roll.\n")
 
+    # List of shortcuts for "list" and "new".
+    _GAME_LIST_COMMANDS = ('list', 'ls', 'l')
+    _GAME_NEW_COMMANDS = ('new', 'n')
+
     def game(self, game_string, player):
 
         valid = False
@@ -474,7 +488,7 @@ class Chat(object):
             primary = string_bits[0].lower()
             if len(string_bits) == 1:
 
-                if primary in ('list', 'ls', 'l'):
+                if primary in self._GAME_LIST_COMMANDS:
                     self.server.game_master.list_games(player)
                     valid = True
 
@@ -482,10 +496,18 @@ class Chat(object):
                     self.server.game_master.list_tables(player, show_private=False)
                     valid = True
 
+            elif len(string_bits) == 2:
+
+                # Possibly a request to list games with a tag.
+                if primary in self._GAME_LIST_COMMANDS:
+                    tag = string_bits[1].lower()
+                    self.server.game_master.list_games(player, tag)
+                    valid = True
+
             elif len(string_bits) == 3:
 
                 # First is new, second is game, third is table.
-                if primary in ('new', 'n'):
+                if primary in self._GAME_NEW_COMMANDS:
 
                     # De-alias the table; bail if it fails.
                     table_name = self.de_alias(player, string_bits[2], TABLE)
@@ -528,7 +550,7 @@ class Chat(object):
                     else:
                         valid_so_far = False
 
-                if valid_so_far and primary in ('new', 'n'):
+                if valid_so_far and primary in self._GAME_NEW_COMMANDS:
 
                     # De-alias the table; bail if it fails.
                     table_name = self.de_alias(player, string_bits[3 + offset], TABLE)
@@ -716,6 +738,20 @@ class Chat(object):
         if not did_become:
             player.tell("Failed to become.\n")
 
+    def uptime(self, player):
+
+        startup_datetime = self.server.get_startup_datetime()
+        uptime = self.server.get_uptime()
+        player.tell_cc("This server was started on ^G%s^~ at ^G%s^~.\n" % (startup_datetime.strftime("%Y-%m-%d"), startup_datetime.strftime("%X")))
+
+        # Days are easy to get from a timedelta.  Hours, minutes, and seconds
+        # require more work.  This does that work.
+        days = uptime.days
+        hours, seconds_remaining = uptime.seconds / 3600, uptime.seconds % 3600
+        minutes, seconds = seconds_remaining / 60, seconds_remaining % 60
+
+        player.tell_cc("It has been up for ^Y%0.2d:%0.2d:%0.2d:%0.2d^~.\n" % (days, hours, minutes, seconds))
+
     def show_help(self, player):
 
         player.tell("\n\nCOMMUNICATION:\n")
@@ -744,6 +780,7 @@ class Chat(object):
         player.tell("\nMETA:\n")
         player.tell_cc("            ^!become^. <newname>      Set name to <newname>.\n")
         player.tell_cc("   ^!alias^. <type> <name> <num>      Alias table/channel <name> to <num>.\n")
+        player.tell_cc("                      ^!uptime^.      See server start time and uptime.\n")
         player.tell_cc("                     ^!help^., ^!?^.      Print this help.\n")
         player.tell_cc("                        ^!quit^.      Disconnect.\n")
 

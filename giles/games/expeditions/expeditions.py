@@ -43,6 +43,8 @@ RIGHT = "right"
 
 NUMERICAL_RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10']
 
+TAGS = ["card", "random", "2p"]
+
 class Expeditions(SeatedGame):
     """A Expeditions game table implementation.  Based on a game invented in
     1999 by Reiner Knizia.
@@ -707,7 +709,7 @@ class Expeditions(SeatedGame):
                         self.tell_pre(player, "Invalid play command.\n")
                     handled = True
 
-                elif primary in ("discard", "toss", "di", "to",):
+                elif primary in ("discard", "toss", "dc", "di", "to",):
                     if len(command_bits) == 2:
                         made_move = self.discard(player, command_bits[1])
                     else:

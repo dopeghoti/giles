@@ -40,8 +40,9 @@ INVALID = "invalid"
 WHITE = "white"
 BLACK = "black"
 
-
 COL_CHARACTERS = "abcdefghijklmnopqrstuvwxyz"
+
+TAGS = ["abstract", "connection", "hex", "2p"]
 
 class Y(SeatedGame):
     """A Y game table implementation.  Invented by Claude Shannon.
@@ -483,6 +484,7 @@ class Y(SeatedGame):
         # Bail if we've met both win conditions.
         if self.touch_bottom and self.touch_right:
             self.found_winner = color
+            return
 
         # Okay, no winner yet.  Recurse on the six adjacent cells.
         for x_delta, y_delta in Y_DELTAS:

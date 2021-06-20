@@ -32,6 +32,8 @@ COLS = "abcdefghijklmnopqrstuvwxyz"
 # Adjacency in Metamorphosis is strictly orthogonal.
 CONNECTION_DELTAS = ((-1, 0), (1, 0), (0, -1), (0, 1))
 
+TAGS = ["abstract", "connection", "square", "2p"]
+
 class Metamorphosis(SeatedGame):
     """A Metamorphosis game table implementation.  Invented in 2009 by Gregory
     Keith Van Patten.  Play seems to show that ko fight mode is definitely
@@ -231,11 +233,18 @@ class Metamorphosis(SeatedGame):
                     curr_id += 1
 
         # Now that we're done with those shenanigans, count the number of unique
-        # groups on the board.
+        # groups on the board.  We may have to chase pointers; imagine a case
+        # where group C coalesced into group B, and later on group B coalesced
+        # into group A.  In that case, C will still refer to group B, which no
+        # longer exists.  At the end of any coalesce chain, though, a group must
+        # point to itself.
         unique_set = set()
         for group_id in id_dict:
-            if id_dict[group_id] not in unique_set:
-                unique_set.add(id_dict[group_id])
+            chase_id = id_dict[group_id]
+            while chase_id != id_dict[chase_id]:
+                chase_id = id_dict[chase_id]
+            if id_dict[chase_id] not in unique_set:
+                unique_set.add(id_dict[chase_id])
 
         return len(unique_set)
 

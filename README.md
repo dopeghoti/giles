@@ -6,13 +6,10 @@ than a decent telnet client.
 
 Chances are pretty good that:
 
-    telnet ripley.thenexusproject.org 9435
+    telnet bombadil.thenexusproject.org 9435
 
 will connect you to the current testing instance of Giles (unless
 it's down).  You should also feel free to crank it up on your own.
-
-The official Giles IRC channel is **#giles** on **irc.freenode.net**.
-Join us there!
 
 Some screenshots:
 
@@ -43,7 +40,7 @@ Some screenshots:
 </table>
 
 Giles is written in Python and makes use of [Miniboa](http://code.google.com/p/miniboa/),
-a pure-Python telnet server implementation, and [Bitstring](https://code.google.com/p/python-bitstring/),
+a pure-Python telnet server implementation, and [Bitstring](http://scott-griffiths.github.io/bitstring/),
 a pure-Python bitstring implementation.
 
 Giles is released under the Affero GPL, version 3.
