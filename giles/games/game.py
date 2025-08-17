@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from giles.state import State
+from giles.utils import rgetattr
 
 class Game(object):
     """The base Game class.  Does a lot of the boring footwork that all
@@ -82,6 +83,7 @@ class Game(object):
         player.tell_cc("\nVIEWING:\n\n")
         player.tell_cc("                ^!kibitz^., ^!watch^.     Watch the game as it happens.\n")
         player.tell_cc("                ^!show^., ^!look^., ^!l^.     Look at the game itself.\n")
+        player.tell_cc("        ^!show_config^., ^!showconf^.     Show the game's configuration.\n")
         player.tell_cc("\nPARTICIPATING:\n\n")
         player.tell_cc("            ^!terminate^., ^!finish^.     Terminate game.\n")
         if self.debug:
@@ -92,6 +94,18 @@ class Game(object):
 
         # This function should /absolutely/ be overridden by any games.
         self.tell_pre(player, "This is the default game class; nothing to show.\n")
+
+    def show_config(self, player):
+
+        if getattr(self, "config_params", None):
+            for name, desc in self.config_params:
+                attr = rgetattr(self, name, None)
+                if attr != None:
+                    player.tell_cc("^G%s^~: ^Y%s^~\n" % (desc, repr(attr)))
+                else:
+                    player.tell_cc("^G%s^~ is not a valid attribute for this game.  Alert the admin.\n" % name)
+        else:
+            player.tell_cc("This game does not support showing its configuration.\n")
 
     def finish(self):
 
@@ -139,6 +153,7 @@ class Game(object):
         #   * help (print help in regards to the game)
         #   * kibitz (watch the game)
         #   * show (show the game itself)
+        #   * show_config (show the configuration of the game)
         #   * terminate (end the game immediately)
         #   * private (make private)
         #   * public (make public)
@@ -169,6 +184,10 @@ class Game(object):
 
         elif primary in ('show', 'look', 'l'):
             self.show(player)
+            handled = True
+
+        elif primary in ('show_config', 'showconf'):
+            self.show_config(player)
             handled = True
 
         elif primary in ('terminate', 'finish', 'flip'):
